@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voice Command | Chatbot</title>
+    <style>
+        .chat-container {
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            font-family: Arial, sans-serif;
+        }
+        .user-message {
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin: 5px 0;
+            text-align: right;
+        }
+        .bot-message {
+            background-color: #d3e9ff;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div id="chat-box"></div>
+        <div class="speaker" style="display: flex; justify-content: space-between; width: 100%; box-shadow: 0 0 13px #0000003d; border-radius: 5px; margin-top: 10px;">
+            <p id="action" style="color: grey; font-weight: 800; padding: 0; padding-left: 2rem;"></p>
+            <button id="speech" onclick="runSpeechRecog()" style="border: transparent; padding: 0 0.5rem;">
+                Tap to Speak
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let synth = window.speechSynthesis;
+        function runSpeechRecog() {
+            
+            
+            var action = document.getElementById('action');
+            
+            let recognition = new webkitSpeechRecognition();
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                action.innerHTML = "Listening...";
+            }
+            
+            recognition.onresult = (event) => {
+                var transcript = event.results[0][0].transcript;
+                
+                action.innerHTML = "";
+                
+                sendMessage(transcript);
+            }
+            
+            recognition.start();
+        }
+
+        function sendMessage(message) {
+            showUserMessage(message);
+            sendToFlaskAPI(message);
+        }
+
+        function sendToFlaskAPI(message) {
+            fetch('/api/process_text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Response from Flask API:', data);
+                handleResponse(data);
+            })
+            .catch(error => {
+                console.error('Error sending data to Flask API:', error);
+            });
+        }
+
+        function handleResponse(data) {
+            showBotMessage(data);
+            speakResponse(data);
+        }
+
+        function showUserMessage(message) {
+            var chatBox = document.getElementById('chat-box');
+            var userMessageHTML = '<div class="user-message">' + message + '</div>';
+            chatBox.innerHTML += userMessageHTML;
+        }
+
+        function showBotMessage(message) {
+            var chatBox = document.getElementById('chat-box');
+            var botMessageHTML = '<div class="bot-message">' + message + '</div>';
+            chatBox.innerHTML += botMessageHTML;
+        }
+
+        function speakResponse(response) {
+            var utterance = new SpeechSynthesisUtterance(response);
+            speechSynthesis.speak(utterance);
+            window.addEventListener('beforeunload',function(){
+                if (synth.speaking) {
+                    synth.cancel();
+                }
+            })
+            document.getElementById('speech').addEventListener('click',function name() {
+                
+                if (synth.speaking) {
+                    synth.cancel();
+            
+            }
+            }) 
+        }
+    </script>
+</body>
+</html>
